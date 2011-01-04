@@ -23,7 +23,7 @@ var dynamichostmap = { lb:["node1v2","node1v3"],
     searcher:["node1v12"],                
     search:["node1v13","node1v14","node1v15"] };
 
-var hostmap = localhostmap;
+var hostmap = dynamichostmap;
 
 var counter = { lb:0, proxy:0, search:0 };
 
