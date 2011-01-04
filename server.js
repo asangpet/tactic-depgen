@@ -20,7 +20,7 @@ var dynamichostmap = { lb:["node1v2","node1v3"],
     app:["node1v7","node1v8","node1v9"],
     db:["node1v10"],
     log:["node1v11"],
-    search_lb:["node1v12"],                
+    searcher:["node1v12"],                
     search:["node1v13","node1v14","node1v15"] };
 
 var hostmap = dynamichostmap;
@@ -120,8 +120,8 @@ router.get('/db', function(request,response) {
 });
 
 router.get('/searcher', function(request,response) {
-    var url_client = http.createClient(port,hostmap.searcher[counter.searcher]);
-    if (++counter.searcher > hostmap.searcher.length) counter.searcher = 0;
+    var url_client = http.createClient(port,hostmap.search[counter.search]);
+    if (++counter.search > hostmap.search.length) counter.search = 0;
     myutil.request(url_client,"/search",function(json,ts) {
         json.searcher = { host:hostname };
         json.search.ts = ts;
