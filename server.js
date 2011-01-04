@@ -23,7 +23,7 @@ var dynamichostmap = { lb:["node1v2","node1v3"],
     search_lb:["node1v12"],                
     search:["node1v13","node1v14","node1v15"] };
 
-var hostmap = localhostmap;
+var hostmap = dynamichostmap;
 
 var counter = { lb:0, proxy:0, search:0 };
 
@@ -164,10 +164,15 @@ for (i=0;i<10000;i++) {
     dbtable[i] = i;
 }
 
+process.on('uncaughtException', function(err) {
+    console.log(err);
+});
+
 child_process.exec('hostname',
     function (error, stdout, stderr) {
         hostname = myutil.trim(stdout);
         console.log('Server running at '+hostname+':'+port);
     }
 );                                
+
 //console.log('Server running at localhost:'+port);
