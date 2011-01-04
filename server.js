@@ -6,7 +6,7 @@ var http=require('http'),
 
 var hostname = "unknown";
 
-var port = 8124;
+var port = 80;
 var localhostmap = { lb:["localhost"],
                 proxy:["localhost"],
                 app:["localhost"],
@@ -23,7 +23,7 @@ var dynamichostmap = { lb:["node1v2","node1v3"],
     searcher:["node1v12"],                
     search:["node1v13","node1v14","node1v15"] };
 
-var hostmap = dynamichostmap;
+var hostmap = localhostmap;
 
 var counter = { lb:0, proxy:0, search:0 };
 
@@ -47,7 +47,7 @@ router.get('/stream', function(request,response) {
 router.get('/store', function(request,response) {
    // main load balancer
     var url_client = http.createClient(port,hostmap.lb[counter.lb]);
-    if (++counter.lb > hostmap.lb.length) counter.lb = 0;
+    if (++counter.lb >= hostmap.lb.length) counter.lb = 0;
     myutil.request(url_client,"/lb",function(json,ts) {
         json.store = { host:hostname };
         json.lb.ts = ts;
@@ -59,7 +59,7 @@ router.get('/lb', function(request,response) {
     // load-balanced proxy
     var url_client = http.createClient(port,hostmap.proxy[counter.proxy]);
     var mycounter = counter.proxy;
-    if (++counter.proxy > hostmap.proxy.length) counter.proxy = 0;
+    if (++counter.proxy >= hostmap.proxy.length) counter.proxy = 0;
     myutil.request(url_client,"/proxy/"+mycounter,function(json,ts) {
         json.lb = { host:hostname };
         json.proxy.ts = ts;
@@ -71,7 +71,7 @@ var cacheProb = 0.7;
 var cachedrequest;
 router.get('/proxy/*', function(request,response,id) {
     // caching proxy
-    var url_client = http.createClient(port,hostmap.app[0]);
+    var url_client = http.createClient(port,hostmap.app[id]);
     // caching probability
     if (Math.random()<cacheProb && cachedrequest != null) {
         cachedrequest.proxy.cached = true;
@@ -104,7 +104,8 @@ router.get('/app/*', function(request,response,id) {
             delay(djson.db.value,10);
             myutil.request(search_client,"/searcher",function(sjson,sts,sdata) {
                 sjson.searcher.ts = sts;
-                sdata.searcher = sjson;
+                sdata.searcher = sjson.searcher;
+                sdata.search = sjson.search;
                 emit(response, sdata);
             }, data);
         },json);
@@ -121,11 +122,11 @@ router.get('/db', function(request,response) {
 
 router.get('/searcher', function(request,response) {
     var url_client = http.createClient(port,hostmap.search[counter.search]);
-    if (++counter.search > hostmap.search.length) counter.search = 0;
+    if (++counter.search >= hostmap.search.length) counter.search = 0;
     myutil.request(url_client,"/search",function(json,ts) {
         json.searcher = { host:hostname };
         json.search.ts = ts;
-        emit(response, json);
+        emit(response, json );
     });        
 });
 
