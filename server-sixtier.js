@@ -46,12 +46,11 @@ router.get('/stream', function(request,response) {
 
 router.get('/store', function(request,response) {
    // main load balancer
-    var url_client = http.createClient(port,hostmap.app[counter.lb]);
-    var mycounter = counter.lb;
+    var url_client = http.createClient(port,hostmap.lb[counter.lb]);
     if (++counter.lb >= hostmap.lb.length) counter.lb = 0;
-    myutil.request(url_client,"/app/"+counter.lb,function(json,ts) {
+    myutil.request(url_client,"/lb",function(json,ts) {
         json.store = { host:hostname };
-        json.app.ts = ts;
+        json.lb.ts = ts;
         emit(response, json);
     });
 });
