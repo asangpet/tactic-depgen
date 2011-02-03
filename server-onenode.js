@@ -2,11 +2,12 @@ var http=require('http'),
     url=require('url'),
     child_process=require('child_process'),
     myutil=require('./myutil'),
+    Worker=require('webworker').Worker,
     router=require('./choreographer').router();
 
 var hostname = "unknown";
 
-var port = 80;
+var port = 8080;
 var localhostmap = { lb:["localhost"],
                 proxy:["localhost"],
                 app:["localhost"],
@@ -30,6 +31,19 @@ var counter = { lb:0, proxy:0, search:0 };
 var dbtable = [];
 
 var searchcount = 0;
+
+router.get('/test/*', function(request,response,rtime) {
+    //console.log(rtime);
+    var valid_uri = [ "/test" ];
+    var w = new Worker(__dirname+'/worker.js');
+    w.onmessage = function(e) {
+      response.writeHead(200,{"Content-Type":"application/json"});
+      response.write(JSON.stringify(e));
+      response.end();
+      w.terminate();
+    };
+    w.postMessage({time:rtime});
+});
 
 router.get('/', function(request,response) {
     var valid_uri = [ "/stream","/store","/lb","/app","/proxy","/log","/db" ]
@@ -175,6 +189,11 @@ function delay(value,factor) {
     var k = 0;
 //    for (i=0;i<2*factor;i++) { k=k+0.14*value+100/2/(k+1); }    
     for (i=0;i<10000*factor;i++) { k=k+value/(k+1); }    
+}
+
+function timedelay(value) {
+    var k = 0;
+    for (i=0;i<1000000;i++) { k=k+1; }
 }
 
 for (i=0;i<10000;i++) {
