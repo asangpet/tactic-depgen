@@ -7,7 +7,7 @@ var http=require('http'),
 
 var hostname = "unknown";
 
-var port = 8080;
+var port = 80;
 var localhostmap = { lb:["localhost"],
                 proxy:["localhost"],
                 app:["localhost"],
