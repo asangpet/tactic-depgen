@@ -44,65 +44,99 @@ app.get('/', function(req, resp) {
 app.get('/composite', function(req, resp) {
     var requestTime = Date.now();
     async.series([
+        forward(dep_url+"/terminal"),
+        worker(500),
+        forward(dep_url+"/terminal"),
+        worker(100),
         function(callback) {
-            // Call first dependency
-            http.get(dep_url+"/terminal", function(result) {
-                console.log("Got response: "+result.statusCode);
-                callback();
-            });
-        },
-        function(callback) {
-            setTimeout(callback, 1000);
-        },
-        function(callback) {
-            // Call second dependency
-            http.get(dep_url+"/terminal", function(result) {
-                console.log("Got response: "+result.statusCode);
-                var responseTime = Date.now()-requestTime;
-                resp.send("All is good self "+responseTime+" ms");
-                callback();
-            });
+            respond(requestTime, resp, "Composite")();
+            callback();
         }
     ]);
 });
 
+app.get('/distributed', function(req, resp) {
+    var requestTime = Date.now();
+    async.parallel([
+        forward(dep_url+"/terminal"),
+        forward(dep_url+"/terminal"),
+        worker(500)
+   ], function(err, result) {
+        work(100, 1, respond(requestTime, resp, "Distributed"));
+    });
+});
+
+app.get('/nested', function(req, resp) {
+    var requestTime = Date.now();
+    async.parallel([
+        forward(dep_url+"/composite"),
+        forward(dep_url+"/composite")
+   ], function(err, result) {
+        work(100, 1, respond(requestTime, resp, "Nested"));
+    });
+});
+
 app.get('/terminal', function(req, resp) {
-    var i = 1;
+    var requestTime = Date.now();
     async.series([
-        function(callback) { i=i+1; callback(); },
-        function(callback) { i=i*10; callback(); },
-        function(callback) { resp.send('Ok this is wierd '+i); callback(); }
+        worker(100),
+        function(callback) { 
+            respond(requestTime, resp, 'terminal')();
+            callback();
+        }
     ]);
 });
 
-/*
-router.get('/', function(request,response) {
-    var valid_uri = [ "/stream","/store","/lb","/app","/proxy","/log","/db" ]
-    response.writeHead(200,{"Content-Type":"application/json"});
-    response.write(JSON.stringify(valid_uri));
-    response.end();
-});
+function forward(uri, callback) {
+    var fn = function(callback) {
+        // Call firsit dependency
+        http.get(uri, function(result) {
+            console.log("Got response: "+result.statusCode);
+            callback();
+        });
+    };
+    return fn;
+}
 
-router.get('/stream', function(request,response) {
-    var url_client = http.createClient(port,"monitor");        
-    myutil.request(url_client,"/list/cpu/hosts",function(json) {
-        console.log("Stream: collect "+json.length+" hosts");
-        emit(response, json);
-    });    
-});
+function respond(requestTime, response, msg) {
+    var fn = function() {
+        var responseTime = Date.now() - requestTime
+        response.send(msg+" "+responseTime+" ms");
+    };
+    return fn;
+}
 
-router.get('/store', function(request,response) {
-   // main load balancer
-    var url_client = http.createClient(port,hostmap.app[counter.lb]);
-    var mycounter = counter.lb;
-    if (++counter.lb >= hostmap.app.length) counter.lb = 0;
-    myutil.request(url_client,"/app/"+counter.lb,function(json,ts) {
-        json.store = { host:hostname };
-        json.app.ts = ts;
-        emit(response, json);
-    });
-});
-*/
+function worker(time, callback) {
+    var fn = function(callback) {
+        work(time, 1, callback);
+    };
+    return fn;
+}
+
+function work(totalTime, portion, callback) {
+    console.log('working '+totalTime+' '+portion);
+
+    var workTime = portion * totalTime;
+    var startTime = Date.now();
+    var endTime = startTime + workTime;
+
+    console.log('start '+startTime+' endtime '+endTime)
+    var value = 1;
+    while (Date.now() < endTime) {
+        value = value + Math.random();
+        if (value > Math.random()) {
+            value = 1;
+        }
+    }
+    var calcTime = Date.now();
+    var diffTime = startTime + totalTime - calcTime;
+    console.log('current '+calcTime +' diff time ' + diffTime);
+    if (diffTime > 0) {
+        setTimeout(callback, diffTime);
+    } else {
+        callback();
+    }
+}
 
 function delay(value,factor) {
     var k = 0;
